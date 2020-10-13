@@ -29,57 +29,57 @@
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
       d3.csv('http://vis.lab.djosix.com:2020/data/iris.csv', data => {
+        data.pop();
         x.domain(dimensions = d3.keys(data[0]).filter(d => {
           return d != 'class' && (y[d] = d3.scale.linear()
-            .domain(d3.extent(data, p => parseFloat(p[d])))
+            .domain(d3.extent(data, p => +p[d]))
             .range([height, 0]));
-        }
-      ));
+        }));
       
-      lines = svg.append('g')
-        .attr('class', 'lines')
-        .selectAll('path')
-        .data(data)
-        .enter().append('path')
-        .attr('d', path)
-        .attr('stroke', d => color(d.class));
+        lines = svg.append('g')
+          .attr('class', 'lines')
+          .selectAll('path')
+          .data(data)
+          .enter().append('path')
+          .attr('d', path)
+          .attr('stroke', d => color(d.class));
+        
+        var g = svg.selectAll('.dimension')
+          .data(dimensions)
+          .enter().append('g')
+          .attr('class', 'dimension')
+          .attr('transform', d => `translate(${x(d)})`)
+          .call(d3.behavior.drag()
+            .origin(function(d) { 
+              return {x: x(d)}; 
+            })
+            .on('dragstart', function(d) {
+              dragging[d] = x(d);
+            })
+            .on('drag', function(d) {
+              dragging[d] = Math.min(width, Math.max(0, d3.event.x));
+              lines.attr('d', path);
+              dimensions.sort((a, b) => position(a) - position(b));
+              x.domain(dimensions);
+              g.attr('transform', d => `translate(${position(d)})`)
+            })
+            .on('dragend', function(d) {
+              delete dragging[d];
+              transition(d3.select(this)).attr('transform', `translate(${x(d)})`);
+              transition(lines).attr('d', path);
+            })
+          );
       
-      var g = svg.selectAll('.dimension')
-        .data(dimensions)
-        .enter().append('g')
-        .attr('class', 'dimension')
-        .attr('transform', d => `translate(${x(d)})`)
-        .call(d3.behavior.drag()
-          .origin(function(d) { 
-            return {x: x(d)}; 
+        g.append('g')
+          .attr('class', 'axis')
+          .each(function(d) {
+            d3.select(this).call(axis.scale(y[d]));
           })
-          .on('dragstart', function(d) {
-            dragging[d] = x(d);
-          })
-          .on('drag', function(d) {
-            dragging[d] = Math.min(width, Math.max(0, d3.event.x));
-            lines.attr('d', path);
-            dimensions.sort((a, b) => position(a) - position(b));
-            x.domain(dimensions);
-            g.attr('transform', d => `translate(${position(d)})`)
-          })
-          .on('dragend', function(d) {
-            delete dragging[d];
-            transition(d3.select(this)).attr('transform', `translate(${x(d)})`);
-            transition(lines).attr('d', path);
-          })
-        );
-    
-      g.append('g')
-        .attr('class', 'axis')
-        .each(function(d) {
-          d3.select(this).call(axis.scale(y[d]));
-        })
-        .append('text')
-        .style('text-anchor', 'middle')
-        .attr('y', -9)
-        .attr('font-size', 16)
-        .text(d => d);
+          .append('text')
+          .style('text-anchor', 'middle')
+          .attr('y', -9)
+          .attr('font-size', 16)
+          .text(d => d);
       });
       
       function position(d) {
