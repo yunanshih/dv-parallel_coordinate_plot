@@ -32,7 +32,7 @@
         data.pop();
         x.domain(dimensions = d3.keys(data[0]).filter(d => {
           return d != 'class' && (y[d] = d3.scale.linear()
-            .domain(d3.extent(data, p => +p[d]))
+            .domain([0, 8])
             .range([height, 0]));
         }));
       
